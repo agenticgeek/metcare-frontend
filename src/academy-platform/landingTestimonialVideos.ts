@@ -1,11 +1,11 @@
 /**
  * Experience wall: YouTube embeds (modal opens with autoplay).
- * Free videos section: optional local previews in `public/videos/` (see `LANDING_TESTIMONIAL_VIDEO_FILES`).
- * Leave the list empty while clips live on Cloudflare Stream / CDN — keeps the repo under GitHub’s 100 MB per-file limit.
+ * Free videos: Cloudflare Stream HLS manifests + poster JPEGs in `public/videos/` (not committed as `.mov`).
  */
 export type LandingVideoOpenPayload =
   | { kind: 'file'; file: string; title?: string }
-  | { kind: 'youtube'; id: string; title?: string };
+  | { kind: 'youtube'; id: string; title?: string }
+  | { kind: 'hls'; manifestUrl: string; title?: string };
 
 export const LANDING_TESTIMONIAL_YOUTUBE_ITEMS = [
   {
@@ -22,7 +22,24 @@ export const LANDING_TESTIMONIAL_YOUTUBE_ITEMS = [
   },
 ] as const;
 
-export const LANDING_TESTIMONIAL_VIDEO_FILES: readonly string[] = [];
+/** HLS master playlists (Cloudflare Stream) aligned with `freeVideos.modules` order; `poster` is a filename in `public/videos/`. */
+export const LANDING_FREE_HLS_ITEMS = [
+  {
+    manifestUrl:
+      'https://customer-33e06r8tfld09gay.cloudflarestream.com/34fcad983192e654414261d9828e5bff/manifest/video.m3u8',
+    poster: 'Introduction Protocole FB METCARE®(1)-Couverture.jpg',
+  },
+  {
+    manifestUrl:
+      'https://customer-33e06r8tfld09gay.cloudflarestream.com/6345d7119e6050ccb6a6e6de7ece5ff1/manifest/video.m3u8',
+    poster: "Les clés d'un drainage réussi FB METCARE®-Couverture.jpg",
+  },
+  {
+    manifestUrl:
+      'https://customer-33e06r8tfld09gay.cloudflarestream.com/109858fd4e22b9011bca0d8b14189054/manifest/video.m3u8',
+    poster: 'Les Erreurs à éviter FB METCARE®-Couverture.jpg',
+  },
+] as const;
 
 export function titleFromVideoFilename(filename: string): string {
   return filename

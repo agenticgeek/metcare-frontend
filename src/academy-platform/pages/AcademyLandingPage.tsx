@@ -1,10 +1,11 @@
+import type Hls from 'hls.js';
 import { motion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 import { AcademyNav } from '../AcademyNav';
 import { getAcademyCopy } from '../academyCopy';
 import {
-  LANDING_TESTIMONIAL_VIDEO_FILES,
+  LANDING_FREE_HLS_ITEMS,
   LANDING_TESTIMONIAL_YOUTUBE_ITEMS,
   type LandingVideoOpenPayload,
   publicVideoUrl,
@@ -34,6 +35,66 @@ const PlayIcon = () => (
     <path d="M8 5v14l11-7z" />
   </svg>
 );
+
+function LandingHlsVideo({
+  manifestUrl,
+  videoRef,
+}: {
+  manifestUrl: string;
+  videoRef: RefObject<HTMLVideoElement | null>;
+}) {
+  const hlsRef = useRef<Hls | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = manifestUrl;
+      void video.play().catch(() => {});
+      return () => {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      };
+    }
+
+    let cancelled = false;
+    void import('hls.js').then(({ default: HlsCtor }) => {
+      if (cancelled || !videoRef.current) return;
+      if (!HlsCtor.isSupported()) return;
+      const hls = new HlsCtor({ enableWorker: true });
+      hlsRef.current = hls;
+      hls.loadSource(manifestUrl);
+      hls.attachMedia(video);
+      hls.on(HlsCtor.Events.MANIFEST_PARSED, () => {
+        void video.play().catch(() => {});
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      hlsRef.current?.destroy();
+      hlsRef.current = null;
+      const v = videoRef.current;
+      if (v) {
+        v.pause();
+        v.removeAttribute('src');
+        v.load();
+      }
+    };
+  }, [manifestUrl, videoRef]);
+
+  return (
+    <video
+      ref={videoRef}
+      className="academy-testimonial-modal-native"
+      controls
+      autoPlay
+      playsInline
+    />
+  );
+}
 
 function LandingPublicVideoLightbox({
   payload,
@@ -71,7 +132,11 @@ function LandingPublicVideoLightbox({
 
   const title =
     (payload.title && payload.title.trim()) ||
-    (payload.kind === 'file' ? titleFromVideoFilename(payload.file) : payload.id);
+    (payload.kind === 'file'
+      ? titleFromVideoFilename(payload.file)
+      : payload.kind === 'youtube'
+        ? payload.id
+        : 'Video');
 
   return (
     <div
@@ -118,6 +183,8 @@ function LandingPublicVideoLightbox({
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
             />
+          ) : payload.kind === 'hls' ? (
+            <LandingHlsVideo key={payload.manifestUrl} videoRef={videoRef} manifestUrl={payload.manifestUrl} />
           ) : (
             <video
               ref={videoRef}
@@ -181,55 +248,39 @@ function LandingTestimonialYoutubeCard({
 
 function FreeAccessVideoCard({
   video,
-  filename,
+  posterSrc,
+  manifestUrl,
   delayIndex,
   onOpen,
 }: {
   video: { title: string; duration: string; description: string };
-  filename: string;
+  posterSrc: string;
+  manifestUrl: string;
   delayIndex: number;
   onOpen: (payload: LandingVideoOpenPayload) => void;
 }) {
   const { lang } = useLang();
   const t = getAcademyCopy(lang);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [loadError, setLoadError] = useState(false);
-  const url = publicVideoUrl(filename);
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v || loadError) return;
-    const nudgeFrame = () => {
-      try {
-        if (v.readyState >= 1 && v.duration > 0.15) v.currentTime = 0.12;
-      } catch {
-        /* seek may fail on some hosts */
-      }
-    };
-    v.addEventListener('loadeddata', nudgeFrame, { once: true });
-    return () => v.removeEventListener('loadeddata', nudgeFrame);
-  }, [url, loadError]);
+  const [posterOk, setPosterOk] = useState(true);
 
   return (
     <motion.article className="academy-video-card" {...cardReveal(delayIndex * 0.07)}>
       <button
         type="button"
         className="academy-video-card-hit"
-        onClick={() => onOpen({ kind: 'file', file: filename, title: video.title })}
+        onClick={() => onOpen({ kind: 'hls', manifestUrl, title: video.title })}
         aria-label={`${t.portal.moduleWatch}: ${video.title}`}
       />
       <div className="academy-video-thumb">
         <span>{t.ui.freeBadge}</span>
-        {!loadError ? (
-          <video
-            ref={videoRef}
+        {posterOk ? (
+          <img
             className="academy-video-thumb-video"
-            src={url}
-            muted
-            playsInline
-            preload="metadata"
-            controls={false}
-            onError={() => setLoadError(true)}
+            src={posterSrc}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onError={() => setPosterOk(false)}
           />
         ) : null}
         <div className="academy-mini-play academy-video-play-hint" aria-hidden="true">
@@ -498,8 +549,8 @@ export default function AcademyLandingPage() {
         </motion.div>
         <div className="academy-video-grid">
           {t.freeVideos.modules.map((video, i) => {
-            const file = LANDING_TESTIMONIAL_VIDEO_FILES[i];
-            if (!file) {
+            const stream = LANDING_FREE_HLS_ITEMS[i];
+            if (!stream) {
               return (
                 <motion.article
                   key={video.title}
@@ -531,7 +582,8 @@ export default function AcademyLandingPage() {
               <FreeAccessVideoCard
                 key={video.title}
                 video={video}
-                filename={file}
+                posterSrc={publicVideoUrl(stream.poster)}
+                manifestUrl={stream.manifestUrl}
                 delayIndex={i}
                 onOpen={setLandingVideoModal}
               />
