@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Raleway:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-snow: #ECEBE9;
+  --color-beige: #DECDBB;
+  --color-silver-blue: #6A88A4;
+  --color-cherry: #2B1517;
+  --color-silver: #C0C0C0;
+
+  --font-heading: "Poppins", sans-serif;
+  --font-sans: "Raleway", sans-serif;
+}
+
+body {
+  background-color: var(--color-snow);
+  color: var(--color-cherry);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
