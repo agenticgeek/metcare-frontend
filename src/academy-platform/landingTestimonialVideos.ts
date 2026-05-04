@@ -1,6 +1,6 @@
 /**
  * Experience wall: YouTube embeds (modal opens with autoplay).
- * Free videos: Cloudflare Stream HLS manifests + poster JPEGs in `public/videos/` (not committed as `.mov`).
+ * Free videos: Cloudflare Stream HLS manifests + poster images (Supabase public storage).
  */
 export type LandingVideoOpenPayload =
   | { kind: 'file'; file: string; title?: string }
@@ -22,22 +22,25 @@ export const LANDING_TESTIMONIAL_YOUTUBE_ITEMS = [
   },
 ] as const;
 
-/** HLS master playlists (Cloudflare Stream) aligned with `freeVideos.modules` order; `poster` is a filename in `public/videos/`. */
+/** HLS master playlists (Cloudflare Stream) aligned with `freeVideos.modules` order. */
 export const LANDING_FREE_HLS_ITEMS = [
   {
     manifestUrl:
       'https://customer-33e06r8tfld09gay.cloudflarestream.com/34fcad983192e654414261d9828e5bff/manifest/video.m3u8',
-    poster: 'Introduction Protocole FB METCARE®(1)-Couverture.jpg',
+    posterUrl:
+      'https://eiuuvcpixqmrwgwvnzax.supabase.co/storage/v1/object/public/public_images_landing/1.jpg',
   },
   {
     manifestUrl:
       'https://customer-33e06r8tfld09gay.cloudflarestream.com/6345d7119e6050ccb6a6e6de7ece5ff1/manifest/video.m3u8',
-    poster: "Les clés d'un drainage réussi FB METCARE®-Couverture.jpg",
+    posterUrl:
+      'https://eiuuvcpixqmrwgwvnzax.supabase.co/storage/v1/object/public/public_images_landing/2.jpg',
   },
   {
     manifestUrl:
       'https://customer-33e06r8tfld09gay.cloudflarestream.com/109858fd4e22b9011bca0d8b14189054/manifest/video.m3u8',
-    poster: 'Les Erreurs à éviter FB METCARE®-Couverture.jpg',
+    posterUrl:
+      'https://eiuuvcpixqmrwgwvnzax.supabase.co/storage/v1/object/public/public_images_landing/3.jpg',
   },
 ] as const;
 

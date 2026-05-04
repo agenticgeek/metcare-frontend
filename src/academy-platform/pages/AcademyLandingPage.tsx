@@ -582,7 +582,7 @@ export default function AcademyLandingPage() {
               <FreeAccessVideoCard
                 key={video.title}
                 video={video}
-                posterSrc={publicVideoUrl(stream.poster)}
+                posterSrc={stream.posterUrl}
                 manifestUrl={stream.manifestUrl}
                 delayIndex={i}
                 onOpen={setLandingVideoModal}
