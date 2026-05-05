@@ -54,11 +54,20 @@ export function isAuthError(err: unknown): err is ApiRequestError {
   return err instanceof ApiRequestError && (err.status === 401 || err.status === 403);
 }
 
-/** API origin without trailing slash, or '' for same-origin (recommended with Vite `/api` proxy in dev). */
+/**
+ * API origin without trailing slash, or '' for same-origin (Vite `/api` proxy in dev).
+ * If VITE_API_URL is a host without `https://`, fetch() would resolve it as a path on the
+ * current site (e.g. vercel.app/metcare-backend.../api/...); we normalize to an absolute origin.
+ */
 export function getApiBase(): string {
   const raw = import.meta.env.VITE_API_URL?.trim();
-  if (raw) return raw.replace(/\/$/, '');
-  return '';
+  if (!raw) return '';
+  const noTrailing = raw.replace(/\/$/, '');
+  if (/^https?:\/\//i.test(noTrailing)) return noTrailing;
+  if (/^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(noTrailing) || noTrailing.startsWith('localhost:') || noTrailing.startsWith('127.0.0.1:')) {
+    return `http://${noTrailing}`;
+  }
+  return `https://${noTrailing}`;
 }
 
 async function parseJson(res: Response): Promise<Record<string, unknown>> {
