@@ -2,12 +2,21 @@
  * Student portal → MET Academy API (Express).
  * httpOnly `student_session` cookie — always use credentials: 'include'.
  *
- * Deploy (Vercel): leave `VITE_API_URL` unset so requests hit same-origin `/api/...`.
- * `vercel.json` rewrites that path to Railway; the browser then stores the session cookie
- * for your app host. Pointing `VITE_API_URL` at Railway directly makes requests cross-site,
- * so the session cookie is often dropped → login succeeds but `/api/modules` returns 401.
+ * Deploy (Vercel): requests must hit same-origin `/api/...` (see `vercel.json` rewrite).
+ * If `VITE_API_URL` points at another host (e.g. Railway), the browser still calls Railway
+ * directly and session cookies usually fail → 401 on `/api/modules`. `getApiBase()` therefore
+ * ignores a cross-origin `VITE_API_URL` in the browser so `/api` proxies work even when that
+ * env var is still set at build time.
  *
  * Local dev: empty `VITE_API_URL` + Vite `server.proxy['/api']` (see vite.config.ts).
+ *
+ * Railway / backend alignment:
+ * - `FRONTEND_URL` must match this SPA’s origin exactly (scheme + host + port).
+ * - `JWT_STUDENT_SECRET` must match the value used when minting sessions (typo ⇒ invalid_token).
+ * - With `AUTH_DEBUG=1`, 401/403 responses may include `X-Auth-Reason` (`missing_token`, `invalid_token`,
+ *   `wrong_role`). We attach it to `ApiRequestError.authReason`. For cross-origin API calls, the backend
+ *   must also expose that header via `Access-Control-Expose-Headers` if you need it in JS (same-origin
+ *   `/api` proxy does not require that).
  *
  * @see Backend README / docs/FRONTEND_INTEGRATION.md on the API repo.
  */
@@ -49,33 +58,69 @@ export type ApiErrorBody = {
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly body: ApiErrorBody | Record<string, unknown>;
+  /** Set when backend sends `X-Auth-Reason` (e.g. `AUTH_DEBUG=1` on Railway). */
+  readonly authReason?: string;
 
-  constructor(message: string, status: number, body: ApiErrorBody | Record<string, unknown>) {
+  constructor(
+    message: string,
+    status: number,
+    body: ApiErrorBody | Record<string, unknown>,
+    authReason?: string,
+  ) {
     super(message);
     this.name = 'ApiRequestError';
     this.status = status;
     this.body = body;
+    this.authReason = authReason;
   }
+}
+
+function readAuthDebugReason(res: Response): string | undefined {
+  if (res.status !== 401 && res.status !== 403) return undefined;
+  const v = res.headers.get('X-Auth-Reason')?.trim();
+  return v || undefined;
 }
 
 export function isAuthError(err: unknown): err is ApiRequestError {
   return err instanceof ApiRequestError && (err.status === 401 || err.status === 403);
 }
 
+function normalizeConfiguredApiOrigin(raw: string): string {
+  const noTrailing = raw.replace(/\/$/, '');
+  if (/^https?:\/\//i.test(noTrailing)) return noTrailing;
+  if (
+    /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(noTrailing) ||
+    noTrailing.startsWith('localhost:') ||
+    noTrailing.startsWith('127.0.0.1:')
+  ) {
+    return `http://${noTrailing}`;
+  }
+  return `https://${noTrailing}`;
+}
+
 /**
- * API origin without trailing slash, or '' for same-origin (Vite `/api` proxy in dev).
- * If VITE_API_URL is a host without `https://`, fetch() would resolve it as a path on the
- * current site (e.g. vercel.app/metcare-backend.../api/...); we normalize to an absolute origin.
+ * API origin without trailing slash, or '' for same-origin (`/api` — Vite proxy in dev, Vercel rewrite in prod).
+ * Bare hosts get `https://` so fetch does not treat them as relative paths on the current site.
+ * In the browser, if the configured origin differs from `window.location.origin`, returns ''
+ * so cookies attach to the app host (cross-origin API URLs break httpOnly sessions).
  */
 export function getApiBase(): string {
   const raw = import.meta.env.VITE_API_URL?.trim();
   if (!raw) return '';
-  const noTrailing = raw.replace(/\/$/, '');
-  if (/^https?:\/\//i.test(noTrailing)) return noTrailing;
-  if (/^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(noTrailing) || noTrailing.startsWith('localhost:') || noTrailing.startsWith('127.0.0.1:')) {
-    return `http://${noTrailing}`;
+
+  const base = normalizeConfiguredApiOrigin(raw);
+
+  if (typeof window !== 'undefined') {
+    try {
+      if (new URL(base).origin !== window.location.origin) {
+        return '';
+      }
+    } catch {
+      return base.replace(/\/$/, '');
+    }
   }
-  return `https://${noTrailing}`;
+
+  return base.replace(/\/$/, '');
 }
 
 async function parseJson(res: Response): Promise<Record<string, unknown>> {
@@ -116,16 +161,23 @@ export async function api<T = unknown>(
   });
 
   const body = await parseJson(res);
+  const authReason = readAuthDebugReason(res);
 
   if (!res.ok) {
     const msg =
       typeof body.message === 'string' ? body.message : res.statusText || 'Request failed';
-    throw new ApiRequestError(msg, res.status, body as ApiErrorBody);
+    if (import.meta.env.DEV && authReason) {
+      console.warn(`[api] ${method} ${url} → ${res.status} (X-Auth-Reason: ${authReason})`);
+    }
+    throw new ApiRequestError(msg, res.status, body as ApiErrorBody, authReason);
   }
 
   if (body.success !== true) {
     const msg = typeof body.message === 'string' ? body.message : 'Unexpected response';
-    throw new ApiRequestError(msg, res.status, body as ApiErrorBody);
+    if (import.meta.env.DEV && authReason) {
+      console.warn(`[api] ${method} ${url} → ${res.status} (X-Auth-Reason: ${authReason})`);
+    }
+    throw new ApiRequestError(msg, res.status, body as ApiErrorBody, authReason);
   }
 
   return body as ApiSuccess<T>;
