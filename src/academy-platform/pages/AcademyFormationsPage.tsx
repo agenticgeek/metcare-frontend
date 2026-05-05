@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listModules } from '@/lib/api';
+import { isAuthError, listModules } from '@/lib/api';
 import type { ModuleSummary } from '@/lib/api';
 import { formatModuleMetaDuration } from '@/lib/formatDuration';
 import { getModuleThumbnailUrl } from '@/lib/moduleThumbnail';
+import { clearStoredStudentProfile } from '@/lib/studentDisplay';
 import { AcademyNav } from '../AcademyNav';
 import { getAcademyCopy } from '../academyCopy';
 import { useAcademyNavSession } from '../useAcademyNavSession';
@@ -111,7 +112,10 @@ export default function AcademyFormationsPage() {
         const sorted = [...res.data].sort(sortModules);
         setStarterModules(sorted.slice(0, 3));
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        if (isAuthError(err)) {
+          clearStoredStudentProfile();
+        }
         if (!cancelled) setStarterModules([]);
       });
     return () => {

@@ -50,6 +50,10 @@ export class ApiRequestError extends Error {
   }
 }
 
+export function isAuthError(err: unknown): err is ApiRequestError {
+  return err instanceof ApiRequestError && (err.status === 401 || err.status === 403);
+}
+
 /** API origin without trailing slash, or '' for same-origin (recommended with Vite `/api` proxy in dev). */
 export function getApiBase(): string {
   const raw = import.meta.env.VITE_API_URL?.trim();
@@ -119,6 +123,16 @@ export const login = (email: string, password: string, locale?: 'fr' | 'en') =>
 
 export const logout = () => api<Record<string, never>>('/api/auth/logout', { method: 'POST' });
 
+export const getCurrentStudent = () =>
+  api<StudentProfile>('/api/auth/me', {
+    method: 'GET',
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-store',
+      Pragma: 'no-cache',
+    },
+  });
+
 export const activate = (token: string, password: string, confirm_password: string) =>
   api<StudentProfile>('/api/auth/activate', {
     method: 'POST',
@@ -144,7 +158,15 @@ export const checkAuthToken = (token: string, type: TokenCheckType = 'activation
   });
 };
 
-export const listModules = () => api<ModuleSummary[]>('/api/modules', { method: 'GET' });
+export const listModules = () =>
+  api<ModuleSummary[]>('/api/modules', {
+    method: 'GET',
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-store',
+      Pragma: 'no-cache',
+    },
+  });
 
 export const getModulePlaybackToken = (moduleId: string) =>
   api<{ token: string }>(`/api/modules/${encodeURIComponent(moduleId)}/token`, { method: 'GET' });

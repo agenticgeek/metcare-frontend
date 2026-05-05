@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { persistStudentProfileFromAuth } from '@/lib/studentDisplay';
-import { ApiRequestError, listModules, login } from '@/lib/api';
+import { clearStoredStudentProfile, persistStudentProfileFromAuth } from '@/lib/studentDisplay';
+import { ApiRequestError, getCurrentStudent, isAuthError, login } from '@/lib/api';
 import { getAcademyCopy } from '@/academy-platform/academyCopy';
 import { useLang } from '@/useLang';
 import type { Lang } from '@/langContext';
@@ -25,11 +25,14 @@ export default function SignInPage() {
 
   useEffect(() => {
     let cancelled = false;
-    listModules()
-      .then(() => {
+    getCurrentStudent()
+      .then((res) => {
+        persistStudentProfileFromAuth(res.data);
         if (!cancelled) navigate('/dashboard', { replace: true });
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        if (isAuthError(err)) clearStoredStudentProfile();
+      });
     return () => {
       cancelled = true;
     };

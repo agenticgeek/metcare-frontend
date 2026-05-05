@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { getModulePlaybackToken, listModules } from '@/lib/api';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { getModulePlaybackToken, isAuthError, listModules } from '@/lib/api';
 import type { ModuleSummary } from '@/lib/api';
 import { formatDurationSeconds } from '@/lib/formatDuration';
 import { streamPlaybackIframeSrc } from '@/lib/streamEmbed';
 import { getAcademyCopy } from '@/academy-platform/academyCopy';
 import { useLang } from '@/useLang';
+import { clearStoredStudentProfile } from '@/lib/studentDisplay';
 import { StudentAuthNav } from './StudentAuthNav';
 import '@/academy-platform/academy.css';
 
@@ -18,6 +19,7 @@ export default function ModulePlayerPage() {
   const { id } = useParams<{ id: string }>();
   const { lang } = useLang();
   const t = getAcademyCopy(lang);
+  const navigate = useNavigate();
 
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [token, setToken] = useState<string | null>(null);
@@ -71,8 +73,14 @@ export default function ModulePlayerPage() {
         const tok = await getModulePlaybackToken(currentId);
         if (cancelled) return;
         setToken(tok.data.token);
-      } catch {
-        if (!cancelled) setError(copy.portal.moduleOpenError);
+      } catch (err) {
+        if (cancelled) return;
+        if (isAuthError(err)) {
+          clearStoredStudentProfile();
+          navigate('/sign-in', { replace: true });
+          return;
+        }
+        setError(copy.portal.moduleOpenError);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -81,7 +89,7 @@ export default function ModulePlayerPage() {
     return () => {
       cancelled = true;
     };
-  }, [currentId, lang]);
+  }, [currentId, lang, navigate]);
 
   const iframeSrc = token ? streamPlaybackIframeSrc(token) : '';
 

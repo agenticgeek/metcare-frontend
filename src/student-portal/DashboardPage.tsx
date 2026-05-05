@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ApiRequestError, getModulePlaybackToken, listModules, logout } from '@/lib/api';
+import { getModulePlaybackToken, isAuthError, listModules, logout } from '@/lib/api';
 import type { ModuleSummary } from '@/lib/api';
 import { formatModuleMetaDuration } from '@/lib/formatDuration';
 import { getModuleThumbnailUrl } from '@/lib/moduleThumbnail';
@@ -164,7 +164,7 @@ export default function DashboardPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          if (err instanceof ApiRequestError && err.status === 401) {
+          if (isAuthError(err)) {
             clearStoredStudentProfile();
             navigate('/sign-in', { replace: true });
             return;
@@ -177,7 +177,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [lang, navigate]);
 
   function closeModal() {
     modalReqRef.current += 1;
@@ -200,8 +200,13 @@ export default function DashboardPage() {
         if (modalReqRef.current !== req) return;
         setModalToken(res.data.token);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (modalReqRef.current !== req) return;
+        if (isAuthError(err)) {
+          clearStoredStudentProfile();
+          navigate('/sign-in', { replace: true });
+          return;
+        }
         setModalError(t.portal.moduleOpenError);
       })
       .finally(() => {

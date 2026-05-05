@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiRequestError, listModules } from '@/lib/api';
+import { getCurrentStudent, isAuthError } from '@/lib/api';
 import {
   STUDENT_PROFILE_STORAGE_KEY,
   clearStoredStudentProfile,
   getStoredDisplayName,
+  persistStudentProfileFromAuth,
 } from '@/lib/studentDisplay';
 
 /**
  * Detects student session for marketing nav: same httpOnly cookie as the dashboard.
  * Refreshes on window focus / visibility so returning from sign-in updates the bar.
- * Profile copy lives in localStorage and is only cleared on logout or 401 (not on network blips).
+ * Profile copy is only display cache; the API remains the source of truth.
  */
 export function useAcademyNavSession() {
   const [initialSessionResolved, setInitialSessionResolved] = useState(false);
@@ -17,19 +18,18 @@ export function useAcademyNavSession() {
   const [displayName, setDisplayName] = useState(() => getStoredDisplayName());
 
   const refresh = useCallback(() => {
-    void listModules()
-      .then(() => {
+    void getCurrentStudent()
+      .then((res) => {
+        persistStudentProfileFromAuth(res.data);
         setAuthed(true);
         setDisplayName(getStoredDisplayName());
       })
       .catch((err: unknown) => {
-        if (err instanceof ApiRequestError && err.status === 401) {
+        if (isAuthError(err)) {
           clearStoredStudentProfile();
-          setAuthed(false);
-          setDisplayName('');
-          return;
         }
-        setDisplayName(getStoredDisplayName());
+        setAuthed(false);
+        setDisplayName('');
       })
       .finally(() => {
         setInitialSessionResolved(true);
