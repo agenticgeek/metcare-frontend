@@ -123,16 +123,6 @@ export const login = (email: string, password: string, locale?: 'fr' | 'en') =>
 
 export const logout = () => api<Record<string, never>>('/api/auth/logout', { method: 'POST' });
 
-export const getCurrentStudent = () =>
-  api<StudentProfile>('/api/auth/me', {
-    method: 'GET',
-    cache: 'no-store',
-    headers: {
-      'Cache-Control': 'no-store',
-      Pragma: 'no-cache',
-    },
-  });
-
 export const activate = (token: string, password: string, confirm_password: string) =>
   api<StudentProfile>('/api/auth/activate', {
     method: 'POST',

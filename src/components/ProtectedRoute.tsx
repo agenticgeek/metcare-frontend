@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { getCurrentStudent } from '@/lib/api';
-import { clearStoredStudentProfile, persistStudentProfileFromAuth } from '@/lib/studentDisplay';
+import { listModules } from '@/lib/api';
+import { clearStoredStudentProfile } from '@/lib/studentDisplay';
 import { StudentAuthNav } from '@/student-portal/StudentAuthNav';
 import '@/academy-platform/academy.css';
 
@@ -10,9 +10,8 @@ export default function ProtectedRoute() {
 
   useEffect(() => {
     let cancelled = false;
-    getCurrentStudent()
-      .then((res) => {
-        persistStudentProfileFromAuth(res.data);
+    listModules()
+      .then(() => {
         if (!cancelled) setState('ok');
       })
       .catch(() => {

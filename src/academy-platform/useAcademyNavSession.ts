@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getCurrentStudent, isAuthError } from '@/lib/api';
+import { isAuthError, listModules } from '@/lib/api';
 import {
   STUDENT_PROFILE_STORAGE_KEY,
   clearStoredStudentProfile,
   getStoredDisplayName,
-  persistStudentProfileFromAuth,
+  readStoredStudentProfile,
 } from '@/lib/studentDisplay';
 
 /**
@@ -18,9 +18,15 @@ export function useAcademyNavSession() {
   const [displayName, setDisplayName] = useState(() => getStoredDisplayName());
 
   const refresh = useCallback(() => {
-    void getCurrentStudent()
-      .then((res) => {
-        persistStudentProfileFromAuth(res.data);
+    if (!readStoredStudentProfile()) {
+      setAuthed(false);
+      setDisplayName('');
+      setInitialSessionResolved(true);
+      return;
+    }
+
+    void listModules()
+      .then(() => {
         setAuthed(true);
         setDisplayName(getStoredDisplayName());
       })

@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { clearStoredStudentProfile, persistStudentProfileFromAuth } from '@/lib/studentDisplay';
-import { ApiRequestError, getCurrentStudent, isAuthError, login } from '@/lib/api';
+import {
+  clearStoredStudentProfile,
+  persistStudentProfileFromAuth,
+  readStoredStudentProfile,
+} from '@/lib/studentDisplay';
+import { ApiRequestError, isAuthError, listModules, login } from '@/lib/api';
 import { getAcademyCopy } from '@/academy-platform/academyCopy';
 import { useLang } from '@/useLang';
 import type { Lang } from '@/langContext';
@@ -24,10 +28,11 @@ export default function SignInPage() {
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
+    if (!readStoredStudentProfile()) return;
+
     let cancelled = false;
-    getCurrentStudent()
-      .then((res) => {
-        persistStudentProfileFromAuth(res.data);
+    listModules()
+      .then(() => {
         if (!cancelled) navigate('/dashboard', { replace: true });
       })
       .catch((err: unknown) => {
