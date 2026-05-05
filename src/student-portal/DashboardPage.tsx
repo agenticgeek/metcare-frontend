@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getModulePlaybackToken, listModules, logout } from '@/lib/api';
+import { ApiRequestError, getModulePlaybackToken, listModules, logout } from '@/lib/api';
 import type { ModuleSummary } from '@/lib/api';
 import { formatModuleMetaDuration } from '@/lib/formatDuration';
 import { getModuleThumbnailUrl } from '@/lib/moduleThumbnail';
@@ -162,8 +162,13 @@ export default function DashboardPage() {
           setModules(res.data);
           setLoadError(null);
         }
-      } catch {
+      } catch (err) {
         if (!cancelled) {
+          if (err instanceof ApiRequestError && err.status === 401) {
+            clearStoredStudentProfile();
+            navigate('/sign-in', { replace: true });
+            return;
+          }
           setModules([]);
           setLoadError(copy.portal.dashboardLoadError);
         }
