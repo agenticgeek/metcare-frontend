@@ -1,6 +1,14 @@
 /**
  * Student portal → MET Academy API (Express).
  * httpOnly `student_session` cookie — always use credentials: 'include'.
+ *
+ * Deploy (Vercel): leave `VITE_API_URL` unset so requests hit same-origin `/api/...`.
+ * `vercel.json` rewrites that path to Railway; the browser then stores the session cookie
+ * for your app host. Pointing `VITE_API_URL` at Railway directly makes requests cross-site,
+ * so the session cookie is often dropped → login succeeds but `/api/modules` returns 401.
+ *
+ * Local dev: empty `VITE_API_URL` + Vite `server.proxy['/api']` (see vite.config.ts).
+ *
  * @see Backend README / docs/FRONTEND_INTEGRATION.md on the API repo.
  */
 
