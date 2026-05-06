@@ -1,3 +1,4 @@
+import { clearStoredStudentProfile } from '@/lib/studentDisplay';
 /**
  * Student portal → MET Academy API (Express).
  * httpOnly `student_session` cookie — always use credentials: 'include'.
@@ -166,7 +167,7 @@ export async function api<T = unknown>(
   if (res.status === 401 || res.status === 403) {
     // Global force-logout for any auth/forbidden errors (deactivated/deleted users)
     if (typeof window !== 'undefined') {
-      import('@/lib/studentDisplay').then((m) => m.clearStoredStudentProfile());
+      clearStoredStudentProfile();
       // Only redirect if not already on an auth page to avoid infinite loops
       const p = window.location.pathname;
       if (p !== '/sign-in' && p !== '/activate' && p !== '/reset-password') {
