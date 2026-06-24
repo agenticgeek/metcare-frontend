@@ -254,7 +254,6 @@ export default function DashboardPage() {
 
   function handleModuleTypeChange(type: 'full-body' | 'nurse-360') {
     setModuleType(type);
-    setShowDropdown(false);
   }
 
   const modalPosterSrc = modalModule ? getModuleThumbnailUrl(modalModule) : undefined;
