@@ -19,8 +19,7 @@ function PlayGlyph() {
   );
 }
 
-/** Shimmer in the thumb until the poster finishes loading (cached images handled via `complete`). */
-function DashboardTilePoster({ src }: { src: string }) {
+function Nurse360TilePoster({ src }: { src: string }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -65,7 +64,7 @@ function DashboardTilePoster({ src }: { src: string }) {
 
 const MODULES_PAGE_SIZE = 6;
 
-function DashboardModuleTile({
+function Nurse360ModuleTile({
   module: m,
   onOpen,
   watchLabel,
@@ -84,7 +83,7 @@ function DashboardModuleTile({
         aria-label={`${watchLabel}: ${m.title}`}
       >
         <div className="academy-dashboard-video-thumb">
-          {thumb ? <DashboardTilePoster src={thumb} /> : null}
+          {thumb ? <Nurse360TilePoster src={thumb} /> : null}
           <span className="academy-dashboard-video-meta">
             #{m.order_index} · {formatModuleMetaDuration(m.duration_seconds)}
           </span>
@@ -102,19 +101,19 @@ function DashboardModuleTile({
   );
 }
 
-export default function DashboardPage() {
+export default function Nurse360Page() {
   const { lang } = useLang();
   const t = getAcademyCopy(lang);
   const navigate = useNavigate();
   const [modules, setModules] = useState<ModuleSummary[] | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [moduleType, setModuleType] = useState<'full-body' | 'nurse-360'>('full-body');
+  const [moduleType, setModuleType] = useState<'full-body' | 'nurse-360'>('nurse-360');
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const [modalModule, setModalModule] = useState<ModuleSummary | null>(null);
   const [modalToken, setModalToken] = useState<string | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
-  /** After user clicks play in the modal, mount iframe with autoplay (thumbnail stays until then). */
   const [modalPlaybackStarted, setModalPlaybackStarted] = useState(false);
 
   const modalReqRef = useRef(0);
@@ -158,7 +157,7 @@ export default function DashboardPage() {
     const copy = getAcademyCopy(lang);
     void (async () => {
       try {
-        const res = await listModules(moduleType);
+        const res = await listModules();
         if (!cancelled) {
           setModules(res.data);
           setLoadError(null);
@@ -178,7 +177,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [lang, navigate, moduleType]);
+  }, [lang, navigate]);
 
   function closeModal() {
     modalReqRef.current += 1;
@@ -255,6 +254,9 @@ export default function DashboardPage() {
   function handleModuleTypeChange(type: 'full-body' | 'nurse-360') {
     setModuleType(type);
     setShowDropdown(false);
+    if (type === 'full-body') {
+      navigate('/dashboard', { replace: true });
+    }
   }
 
   const modalPosterSrc = modalModule ? getModuleThumbnailUrl(modalModule) : undefined;
@@ -286,52 +288,78 @@ export default function DashboardPage() {
           </header>
 
           <div className="academy-dashboard-modules-head">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  borderRadius: '6px',
-                  border: '1px solid #ddd',
-                  backgroundColor: '#f5f5f5',
-                  padding: '4px',
-                }}
-              >
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <h2 className="academy-dashboard-modules-title" id="modules-heading">
+                Module Nurse 360
+              </h2>
+              <div style={{ position: 'relative' }}>
                 <button
                   type="button"
-                  onClick={() => handleModuleTypeChange('full-body')}
+                  onClick={() => setShowDropdown(!showDropdown)}
                   style={{
-                    padding: '10px 16px',
-                    border: 'none',
-                    backgroundColor: moduleType === 'full-body' ? '#fff' : 'transparent',
+                    padding: '8px 12px',
+                    border: '1px solid #ccc',
                     borderRadius: '4px',
+                    backgroundColor: '#fff',
                     cursor: 'pointer',
                     fontSize: '14px',
-                    fontWeight: moduleType === 'full-body' ? '600' : '500',
-                    color: moduleType === 'full-body' ? '#000' : '#666',
-                    transition: 'all 0.2s ease',
-                    boxShadow: moduleType === 'full-body' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    fontWeight: '500',
                   }}
                 >
-                  Modules Full Body
+                  ▼
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleModuleTypeChange('nurse-360')}
-                  style={{
-                    padding: '10px 16px',
-                    border: 'none',
-                    backgroundColor: moduleType === 'nurse-360' ? '#fff' : 'transparent',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: moduleType === 'nurse-360' ? '600' : '500',
-                    color: moduleType === 'nurse-360' ? '#000' : '#666',
-                    transition: 'all 0.2s ease',
-                    boxShadow: moduleType === 'nurse-360' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  }}
-                >
-                  Module Nurse 360
-                </button>
+                {showDropdown && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      backgroundColor: '#fff',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                      zIndex: 10,
+                      minWidth: '200px',
+                      marginTop: '4px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleModuleTypeChange('full-body')}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '12px',
+                        textAlign: 'left',
+                        border: 'none',
+                        backgroundColor: moduleType === 'full-body' ? '#f0f0f0' : '#fff',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: moduleType === 'full-body' ? '600' : '400',
+                      }}
+                    >
+                      Modules Full Body
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleModuleTypeChange('nurse-360')}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '12px',
+                        textAlign: 'left',
+                        border: 'none',
+                        borderTop: '1px solid #eee',
+                        backgroundColor: moduleType === 'nurse-360' ? '#f0f0f0' : '#fff',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: moduleType === 'nurse-360' ? '600' : '400',
+                      }}
+                    >
+                      Module Nurse 360
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             {modules && modules.length > 0 ? (
@@ -373,7 +401,7 @@ export default function DashboardPage() {
                 aria-labelledby="modules-heading"
               >
                 {pagedModules.map((m) => (
-                  <DashboardModuleTile
+                  <Nurse360ModuleTile
                     key={m.id}
                     module={m}
                     onOpen={openModal}
@@ -480,7 +508,7 @@ export default function DashboardPage() {
             </div>
             <div className="academy-dashboard-modal-foot">
               <Link
-                to={`/dashboard/module/${encodeURIComponent(modalModule.id)}`}
+                to={`/nurse-360/module/${encodeURIComponent(modalModule.id)}`}
                 className="academy-dashboard-modal-full-link"
                 onClick={closeModal}
               >
