@@ -38,6 +38,7 @@ export type ModuleSummary = {
   title: string;
   description: string | null;
   duration_seconds: number;
+  module_type?: string;
   /** Absolute URL to a poster image (optional; backend may omit). */
   thumbnail_url?: string | null;
   poster_url?: string | null;
@@ -230,8 +231,12 @@ export const checkAuthToken = (token: string, type: TokenCheckType = 'activation
   });
 };
 
-export const listModules = () =>
-  api<ModuleSummary[]>('/api/modules', {
+export const listModules = (type?: string) => {
+  const params = new URLSearchParams();
+  if (type) params.append('type', type);
+  const query = params.toString();
+  const path = query ? `/api/modules?${query}` : '/api/modules';
+  return api<ModuleSummary[]>(path, {
     method: 'GET',
     cache: 'no-store',
     headers: {
@@ -239,6 +244,7 @@ export const listModules = () =>
       Pragma: 'no-cache',
     },
   });
+};
 
 export const getModulePlaybackToken = (moduleId: string) =>
   api<{ token: string }>(`/api/modules/${encodeURIComponent(moduleId)}/token`, { method: 'GET' });

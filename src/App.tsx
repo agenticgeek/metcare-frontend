@@ -10,6 +10,7 @@ import ForgotPasswordPage from './student-portal/ForgotPasswordPage';
 import ActivatePage from './student-portal/ActivatePage';
 import ResetPasswordPage from './student-portal/ResetPasswordPage';
 import DashboardPage from './student-portal/DashboardPage';
+import Nurse360Page from './student-portal/Nurse360Page';
 import ModulePlayerPage from './student-portal/ModulePlayerPage';
 
 const STUDENT_LANG_KEY = 'met_student_lang';
@@ -58,6 +59,8 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/dashboard/module/:id" element={<ModulePlayerPage />} />
+            <Route path="/nurse-360" element={<Nurse360Page />} />
+            <Route path="/nurse-360/module/:id" element={<ModulePlayerPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
